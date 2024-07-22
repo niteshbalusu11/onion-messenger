@@ -1,0 +1,20 @@
+{
+  "name": "onion-messenger",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/deasync": "^0.1.5",
+    "@types/secp256k1": "^4.0.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "deasync": "^0.1.30",
+    "lightning": "^10.16.0",
+    "lightningdevkit": "^0.0.12-3.0",
+    "ln-sync": "^6.0.4",
+    "secp256k1": "^5.0.0"
+  }
+}
