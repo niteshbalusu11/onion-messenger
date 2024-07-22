@@ -28,6 +28,8 @@ await initializeWasmFromBinary(
   readFileSync("node_modules/lightningdevkit/liblightningjs.wasm")
 );
 
+await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for 500ms
+
 // Main function to run the onion messenger
 export async function runOnionMessenger(
   peers: Map<string, boolean>,
@@ -87,8 +89,6 @@ export async function runOnionMessenger(
         const pubkey = hexAsBuffer(data.public_key);
         const result = OnionMessage.constructor_read(hexAsBuffer(data.message));
 
-        // console.log("OnionMessage read result:", result);
-
         if (!result.is_ok()) {
           console.log("Error reading onion message");
           return;
@@ -113,33 +113,47 @@ export async function runOnionMessenger(
   // Periodic polling for outgoing messages
   const interval = setInterval(async () => {
     try {
-      for (const [peer, supportsOnion] of peers) {
+      console.log("peers", Array.from(peers.entries()));
+      for (const [peer, supportsOnion] of peers.entries()) {
         console.log("peer", peer);
         if (supportsOnion) {
-          const peerBuffer = hexAsBuffer(peer);
-          if (peerBuffer.length !== 33) {
-            console.error("Invalid peer public key length");
-            continue;
-          }
-          const outgoingMessage =
-            onionHandler.next_onion_message_for_peer(peerBuffer);
+          try {
+            const peerBuffer = hexAsBuffer(peer);
+            if (peerBuffer.length !== 33) {
+              console.error("Invalid peer public key length");
+              continue;
+            }
+            console.log("Checking for outgoing message for peer:", peer);
+            const outgoingMessage =
+              onionHandler.next_onion_message_for_peer(peerBuffer);
 
-          console.log("outgoing message", outgoingMessage);
-          if (outgoingMessage) {
-            await sendMessageToPeer({
-              lnd,
-              public_key: peer,
-              type: ONION_MESSAGE_TYPE,
-              message: bufferAsHex(outgoingMessage.write()),
-            });
-            console.log("Sent outgoing onion message to peer:", peer);
+            console.log("Outgoing message result:", outgoingMessage);
+
+            if (outgoingMessage) {
+              await sendMessageToPeer({
+                lnd,
+                public_key: peer,
+                type: ONION_MESSAGE_TYPE,
+                message: bufferAsHex(outgoingMessage.write()),
+              });
+              console.log("Sent outgoing onion message to peer:", peer);
+            } else {
+              console.log("No outgoing message for peer:", peer);
+            }
+          } catch (err) {
+            console.error("Error calling next_onion_message_for_peer:", err);
+            console.error(
+              "Error processing outgoing message for peer:",
+              peer,
+              err
+            );
           }
         }
       }
     } catch (err) {
       console.error("interval error", err);
     }
-  }, 1000);
+  }, 5000);
 
   // Cleanup on shutdown
   const shutdown = () => {

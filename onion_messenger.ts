@@ -19,9 +19,11 @@ import {
   ExpandedKey,
   InvoiceError,
   UntrustedString,
-  OnionMessageContents,
   BlindedPath,
   Destination,
+  OffersMessage_Invoice,
+  OffersMessage_InvoiceError,
+  OffersMessage_InvoiceRequest,
 } from "lightningdevkit";
 import { randomBytes } from "crypto";
 import {
@@ -281,62 +283,54 @@ export class OnionOffersMessageHandler
 
   handle_message(message: OffersMessage): Option_OffersMessageZ {
     console.log("handle_message called with message:", message);
-    const contents = message.as_OnionMessageContents();
 
-    switch (contents.constructor.name) {
-      case "OffersMessage_InvoiceRequest":
-        console.error("Invoice request received, payment not yet supported.");
-        return Option_OffersMessageZ.constructor_none();
+    if (message instanceof OffersMessage_InvoiceRequest) {
+      console.error("Invoice request received, payment not yet supported.");
+      return Option_OffersMessageZ.constructor_none();
+    } else if (message instanceof OffersMessage_Invoice) {
+      console.info("Received an invoice:", message);
+      const invoice = message.invoice;
 
-      case "OffersMessage_Invoice":
-        console.info("Received an invoice:", message);
-        const secpCtx = new Secp256k1();
-
-        const invoiceResult = contents.verify(this.expandedKey, secpCtx);
-        if (invoiceResult.is_ok()) {
-          const paymentId = invoiceResult.res;
-          console.info(
-            `Successfully verified invoice for payment_id ${paymentId}`
-          );
-
-          const payInfo =
-            this.activePayments.get(paymentId) || new PaymentInfo();
-          if (payInfo.invoice) {
-            console.error(
-              "We already received an invoice with this payment id."
-            );
-          } else {
-            payInfo.state = "InvoiceReceived";
-            payInfo.invoice = message;
-            this.activePayments.set(paymentId, payInfo);
-          }
-          return Option_OffersMessageZ.constructor_some(message);
+      const verifyResult = invoice.verify(this.expandedKey);
+      if (verifyResult.is_ok()) {
+        const paymentId = verifyResult.res;
+        console.info(
+          `Successfully verified invoice for payment_id ${paymentId}`
+        );
+        let payInfo =
+          this.activePayments.get(paymentId.toString()) || new PaymentInfo();
+        if (payInfo.invoice) {
+          console.error("We already received an invoice with this payment id.");
         } else {
-          console.error("Invoice verification failed for invoice:", message);
-          return Option_OffersMessageZ.constructor_some(
-            OffersMessage.constructor_invoice_error(
-              InvoiceError.constructor_new(
-                null,
-                UntrustedString.constructor_new("invoice verification failure")
-              )
-            )
-          );
+          payInfo.state = "InvoiceReceived";
+          payInfo.invoice = invoice;
+          this.activePayments.set(paymentId.toString(), payInfo);
         }
-
-      case "OffersMessage_InvoiceError":
-        console.error("Invoice error received:", message);
-        return Option_OffersMessageZ.constructor_none();
-
-      default:
-        console.error("Unknown message type:", message);
-        return Option_OffersMessageZ.constructor_none();
+        return Option_OffersMessageZ.constructor_some(message);
+      } else {
+        console.error("Invoice verification failed for invoice:", message);
+        return Option_OffersMessageZ.constructor_some(
+          OffersMessage.constructor_invoice_error(
+            InvoiceError.constructor_new(
+              null,
+              UntrustedString.constructor_new("invoice verification failure")
+            )
+          )
+        );
+      }
+    } else if (message instanceof OffersMessage_InvoiceError) {
+      console.error("Invoice error received:", message);
+      return Option_OffersMessageZ.constructor_none();
+    } else {
+      console.error("Unknown message type:", message);
+      return Option_OffersMessageZ.constructor_none();
     }
   }
 
   release_pending_messages(): ThreeTuple_OffersMessageDestinationBlindedPathZ[] {
     const messages = this.pendingMessages.slice();
     this.pendingMessages.length = 0;
-    console.log("release_pending_messages called");
+    console.log("release_pending_messages called, messages:", messages);
 
     return messages.map((msg) => {
       return ThreeTuple_OffersMessageDestinationBlindedPathZ.constructor_new(

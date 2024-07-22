@@ -106,11 +106,17 @@ async function main() {
       ignoreMessageHandler as unknown as CustomOnionMessageHandler
     );
 
+    const onionHandler = messenger.as_OnionMessageHandler();
+
+    if (!onionHandler) {
+      throw new Error("Failed to initialize OnionMessageHandler");
+    }
+
     await runOnionMessenger(peerSupport, lnd, messenger);
 
     console.log("reaching here", peerSupport);
   } catch (error) {
-    console.log(error);
+    console.log("error starting onion messenger", error);
   }
 }
 
