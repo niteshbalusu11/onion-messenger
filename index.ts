@@ -101,9 +101,9 @@ async function main() {
       nodeSigner,
       logger,
       nodeIdLookup,
-      messageRouter as unknown as MessageRouter,
+      messageRouter.as_MessageRouter(),
       offersMessageHandler,
-      ignoreMessageHandler as unknown as CustomOnionMessageHandler
+      ignoreMessageHandler.as_CustomOnionMessageHandler()
     );
 
     const onionHandler = messenger.as_OnionMessageHandler();
