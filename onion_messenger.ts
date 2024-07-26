@@ -109,21 +109,22 @@ export class LndNodeSigner implements NodeSignerInterface {
       return Result_ThirtyTwoBytesNoneZ.constructor_err();
     }
 
-    console.log("ecdh called with other_key:", other_key);
+    console.log("ecdh called with other_key:", bufferAsHex(other_key));
 
     let tweakedKey = other_key;
 
     if (tweak instanceof Option_BigEndianScalarZ_Some) {
+      console.log("ecdh tweak:", tweak);
       const bigEndianScalar = tweak.some;
       const tweakBytes = bigEndianScalar.scalar_bytes;
       const tweaked = publicKeyTweakMul(tweakedKey, tweakBytes);
+
+      console.log("ecdh tweaked:", bufferAsHex(tweaked));
       if (!tweaked) {
         return Result_ThirtyTwoBytesNoneZ.constructor_err();
       }
       tweakedKey = tweaked;
     }
-
-    console.log("ecdh tweakedKey:", tweakedKey);
 
     let result: Result_ThirtyTwoBytesNoneZ;
     let done = false;
@@ -148,9 +149,12 @@ export class LndNodeSigner implements NodeSignerInterface {
         done = true;
       });
 
+    console.log("ecdh done:", done);
     while (!done) {
       deasync.sleep(100);
     }
+
+    console.log("ecdh result:");
 
     return result!;
   }

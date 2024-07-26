@@ -127,7 +127,7 @@ export async function runOnionMessenger(
             const outgoingMessage =
               onionHandler.next_onion_message_for_peer(peerBuffer);
 
-            console.log("Outgoing message result:", outgoingMessage);
+            console.log("Outgoing message result:", outgoingMessage.write());
 
             if (outgoingMessage) {
               await sendMessageToPeer({
@@ -141,7 +141,6 @@ export async function runOnionMessenger(
               console.log("No outgoing message for peer:", peer);
             }
           } catch (err) {
-            console.error("Error calling next_onion_message_for_peer:", err);
             console.error(
               "Error processing outgoing message for peer:",
               peer,
